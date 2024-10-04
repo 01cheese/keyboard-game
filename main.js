@@ -15,9 +15,13 @@ const player = {
 const enemies = [];
 const lasers = [];
 let currentInput = '';
-let activeEnemy = null;  // Активное слово
-let words = ['abs', 'arc', 'arial', 'alpha', 'arkadiush', 'africa', 'america'];
+let activeEnemy = null;
+let wordsTyped = 0;
+let gameOver = false;
 let difficulty = 'medium';  // Уровень сложности по умолчанию
+let spawnIntervalId = null;  // Переменная для хранения ID интервала
+
+const words = ['apple', 'banana', 'cherry', 'date', 'elderberry', 'writes', 'video', 'tables', 'info', 'mixed', 'usual', 'entire', 'act', 'built', 'king'];
 
 function spawnEnemy() {
     let word;
@@ -32,6 +36,8 @@ function spawnEnemy() {
         y: 0,
         speed: getEnemySpeed()  // Скорость врагов в зависимости от уровня сложности
     });
+
+    console.log(`Enemy spawned: ${word}, total enemies: ${enemies.length}`);
 }
 
 function getEnemySpeed() {
@@ -47,44 +53,48 @@ function getEnemySpeed() {
 
 function updateEnemies() {
     enemies.forEach((enemy, index) => {
-        enemy.y += enemy.speed;
+        if (!gameOver) {
+            // Расчет направления движения к игроку
+            const dx = player.x - enemy.x;
+            const dy = player.y - enemy.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (enemy.x > player.x) {
-            enemy.x -= 1;
-        } else if (enemy.x < player.x) {
-            enemy.x += 1;
-        }
+            const velocityX = (dx / distance) * enemy.speed;
+            const velocityY = (dy / distance) * enemy.speed;
 
-        // Отображение оставшихся букв слова с улучшенными стилями
-        ctx.fillStyle = enemy === activeEnemy ? 'orange' : 'white';
-        ctx.font = 'bold 28px Arial';
-        ctx.textAlign = 'center';
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        ctx.shadowBlur = 10;
-        const remainingWord = enemy.word.slice(enemy.current.length);
-        ctx.fillText(remainingWord, enemy.x, enemy.y);
+            enemy.x += velocityX;
+            enemy.y += velocityY;
 
-        if (enemy.y > canvas.height) {
-            enemies.splice(index, 1);
-            if (enemy === activeEnemy) {
-                activeEnemy = null;  // Сброс активного слова, если оно ушло за границы экрана
-                currentInput = '';  // Сброс текущего ввода
+            if (enemy.y >= player.y - 10) {  // Если слово достигло игрока
+                endGame();  // Завершаем игру
             }
-        }
 
-        if (enemy.word === enemy.current) {
-            enemies.splice(index, 1);
-            activeEnemy = null;  // Освобождаем активное слово после завершения ввода
-            currentInput = '';  // Сбрасываем ввод
+            // Отображение оставшихся букв слова
+            ctx.fillStyle = enemy === activeEnemy ? 'orange' : 'white';
+            ctx.font = 'bold 28px Arial';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 10;
+            const remainingWord = enemy.word.slice(enemy.current.length);
+            ctx.fillText(remainingWord, enemy.x, enemy.y);
+
+            if (enemy.word === enemy.current) {
+                enemies.splice(index, 1);
+                activeEnemy = null;  // Освобождаем активное слово после завершения ввода
+                currentInput = '';  // Сбрасываем ввод
+                wordsTyped++;  // Увеличиваем счетчик введённых слов
+            }
         }
     });
 }
 
 function drawPlayer() {
-    ctx.fillStyle = player.color;
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = 'cyan';
-    ctx.fillRect(player.x - player.width / 2, player.y, player.width, player.height);
+    if (!gameOver) {
+        ctx.fillStyle = player.color;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = 'cyan';
+        ctx.fillRect(player.x - player.width / 2, player.y, player.width, player.height);
+    }
 }
 
 function drawLasers() {
@@ -111,73 +121,103 @@ function drawLasers() {
 }
 
 function handleInput(key) {
-    if (!activeEnemy) {
-        // Поиск слова, которое начинается с введенной буквы
-        activeEnemy = enemies.find(enemy => enemy.word.startsWith(key.toLowerCase()));
-        if (!activeEnemy) return;  // Если нет совпадений, ничего не делаем
-    }
-
-    currentInput += key.toLowerCase();
-
-    if (activeEnemy.word.startsWith(currentInput)) {
-        lasers.push({
-            x: player.x,
-            y: player.y,
-            targetX: activeEnemy.x + ctx.measureText(activeEnemy.word.charAt(currentInput.length - 1)).width / 2,
-            targetY: activeEnemy.y,
-            speed: 10
-        });
-
-        activeEnemy.current = currentInput;
-
-        // Если слово полностью введено, уничтожаем врага
-        if (activeEnemy.word === currentInput) {
-            enemies.splice(enemies.indexOf(activeEnemy), 1);
-            activeEnemy = null;  // Освобождаем активное слово
-            currentInput = '';  // Сбрасываем ввод
+    if (!gameOver) {
+        if (!activeEnemy) {
+            activeEnemy = enemies.find(enemy => enemy.word.startsWith(currentInput + key.toLowerCase()));
+            if (!activeEnemy) return;
         }
-    } else {
-        currentInput = '';  // Если ввод не совпадает, сбрасываем текущий ввод
+
+        const nextLetter = activeEnemy.word[currentInput.length];
+
+        if (key.toLowerCase() === nextLetter) {
+            currentInput += key.toLowerCase();
+
+            lasers.push({
+                x: player.x,
+                y: player.y,
+                targetX: activeEnemy.x + ctx.measureText(nextLetter).width / 2,
+                targetY: activeEnemy.y,
+                speed: 10
+            });
+
+            activeEnemy.current = currentInput;
+
+            if (activeEnemy.word === currentInput) {
+                enemies.splice(enemies.indexOf(activeEnemy), 1);
+                activeEnemy = null;
+                currentInput = '';
+                wordsTyped++;
+            }
+        }
     }
 }
 
 function setDifficulty(level) {
     difficulty = level;
-    enemies.length = 0;  // Очистить экран при смене сложности
+    enemies.length = 0;
     activeEnemy = null;
     currentInput = '';
     alert(`Уровень сложности установлен на: ${level.toUpperCase()}`);
 }
 
-function gameLoop() {
+function endGame() {
+    gameOver = true;
+    clearInterval(spawnIntervalId);  // Останавливаем спавн врагов
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'red';
+    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 50);
 
-    updateEnemies();
-    drawPlayer();
-    drawLasers();
+    ctx.font = '24px Arial';
+    ctx.fillStyle = 'white';
+    ctx.fillText(`Количество введённых слов: ${wordsTyped}`, canvas.width / 2, canvas.height / 2);
+    ctx.fillText(`Скорость врагов: ${difficulty.toUpperCase()}`, canvas.width / 2, canvas.height / 2 + 30);
+
+    ctx.fillText('Нажмите R для перезапуска', canvas.width / 2, canvas.height / 2 + 60);
+}
+
+function resetGame() {
+    gameOver = false;
+    wordsTyped = 0;
+    currentInput = '';
+    activeEnemy = null;
+    enemies.length = 0;
+    startSpawning();  // Перезапуск спавна врагов
+}
+
+function gameLoop() {
+    if (!gameOver) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        updateEnemies();
+        drawPlayer();
+        drawLasers();
+    }
 
     requestAnimationFrame(gameLoop);
 }
 
-// Спавн врагов в зависимости от сложности
 function startSpawning() {
     let spawnInterval;
     switch (difficulty) {
         case 'easy':
-            spawnInterval = 3000;  // Больше времени для легкого уровня
+            spawnInterval = 3000;
             break;
         case 'hard':
-            spawnInterval = 1500;  // Меньше времени для сложного уровня
+            spawnInterval = 1500;
             break;
         default:
-            spawnInterval = 2000;  // Средний уровень
+            spawnInterval = 2000;
     }
-    setInterval(spawnEnemy, spawnInterval);
+    spawnIntervalId = setInterval(spawnEnemy, spawnInterval);  // Сохраняем ID интервала
+    console.log(`Spawning enemies every ${spawnInterval}ms`);
 }
 
 // Отслеживание ввода пользователя
 window.addEventListener('keydown', (event) => {
-    if (event.key.length === 1 && event.key.match(/[a-zA-Z]/)) {
+    if (gameOver && event.key === 'r') {
+        resetGame();  // Перезапуск игры при нажатии "R"
+    } else if (event.key.length === 1 && event.key.match(/[a-zA-Z]/)) {
         handleInput(event.key);
     }
 });
