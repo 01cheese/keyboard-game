@@ -15,7 +15,8 @@ const player = {
 const enemies = [];
 const lasers = [];
 let currentInput = '';
-let words = ['apple', 'atom', 'alert', 'arial', 'africa', 'act'];
+let activeEnemy = null;  // Активное слово
+let words = ['abs', 'arc', 'arial', 'alpha', 'arkadiush', 'africa', 'america'];
 let difficulty = 'medium';  // Уровень сложности по умолчанию
 
 function spawnEnemy() {
@@ -55,7 +56,7 @@ function updateEnemies() {
         }
 
         // Отображение оставшихся букв слова с улучшенными стилями
-        ctx.fillStyle = enemy.word.startsWith(enemy.current) ? 'orange' : 'white';
+        ctx.fillStyle = enemy === activeEnemy ? 'orange' : 'white';
         ctx.font = 'bold 28px Arial';
         ctx.textAlign = 'center';
         ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
@@ -65,11 +66,16 @@ function updateEnemies() {
 
         if (enemy.y > canvas.height) {
             enemies.splice(index, 1);
+            if (enemy === activeEnemy) {
+                activeEnemy = null;  // Сброс активного слова, если оно ушло за границы экрана
+                currentInput = '';  // Сброс текущего ввода
+            }
         }
 
         if (enemy.word === enemy.current) {
             enemies.splice(index, 1);
-            currentInput = '';
+            activeEnemy = null;  // Освобождаем активное слово после завершения ввода
+            currentInput = '';  // Сбрасываем ввод
         }
     });
 }
@@ -105,35 +111,40 @@ function drawLasers() {
 }
 
 function handleInput(key) {
+    if (!activeEnemy) {
+        // Поиск слова, которое начинается с введенной буквы
+        activeEnemy = enemies.find(enemy => enemy.word.startsWith(key.toLowerCase()));
+        if (!activeEnemy) return;  // Если нет совпадений, ничего не делаем
+    }
+
     currentInput += key.toLowerCase();
 
-    enemies.forEach((enemy, enemyIndex) => {
-        if (enemy.word.startsWith(currentInput)) {
-            lasers.push({
-                x: player.x,
-                y: player.y,
-                targetX: enemy.x + ctx.measureText(enemy.word.charAt(currentInput.length - 1)).width / 2,
-                targetY: enemy.y,
-                speed: 10
-            });
+    if (activeEnemy.word.startsWith(currentInput)) {
+        lasers.push({
+            x: player.x,
+            y: player.y,
+            targetX: activeEnemy.x + ctx.measureText(activeEnemy.word.charAt(currentInput.length - 1)).width / 2,
+            targetY: activeEnemy.y,
+            speed: 10
+        });
 
-            enemy.current = currentInput;
+        activeEnemy.current = currentInput;
 
-            if (enemy.word === currentInput) {
-                enemies.splice(enemyIndex, 1);
-                currentInput = '';
-            }
+        // Если слово полностью введено, уничтожаем врага
+        if (activeEnemy.word === currentInput) {
+            enemies.splice(enemies.indexOf(activeEnemy), 1);
+            activeEnemy = null;  // Освобождаем активное слово
+            currentInput = '';  // Сбрасываем ввод
         }
-    });
-
-    if (!enemies.some(enemy => enemy.word.startsWith(currentInput))) {
-        currentInput = '';
+    } else {
+        currentInput = '';  // Если ввод не совпадает, сбрасываем текущий ввод
     }
 }
 
 function setDifficulty(level) {
     difficulty = level;
     enemies.length = 0;  // Очистить экран при смене сложности
+    activeEnemy = null;
     currentInput = '';
     alert(`Уровень сложности установлен на: ${level.toUpperCase()}`);
 }
