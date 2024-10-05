@@ -8,20 +8,101 @@
         body, html {
             margin: 0;
             padding: 0;
-            overflow: hidden;
-            background-color: #000;
-            color: white;
-            font-family: Arial, sans-serif;
+            background-color: #282c34;
+            color: #61dafb;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+        .menu, .game-over, .game-container {
+            display: none;
+        }
+        .menu.active, .game-over.active, .game-container.active {
+            display: block;
+        }
+        .menu h1 {
+            margin-bottom: 20px;
+        }
+        .difficulty-selection {
+            margin-bottom: 20px;
+        }
+        .difficulty-option {
+            margin: 10px;
+            display: flex;
+            align-items: center;
+        }
+        input[type="radio"] {
+            margin-right: 10px;
+        }
+        button {
+            background-color: #61dafb;
+            color: #282c34;
+            padding: 15px 30px;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
         }
         canvas {
+            background-color: #111;
             display: block;
             margin: 0 auto;
-            background-color: #111;
+        }
+        .explosion {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: orange;
+            border-radius: 50%;
+            opacity: 0;
+            pointer-events: none;
+            animation: explosion-animation 0.5s forwards;
+        }
+        @keyframes explosion-animation {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(2);
+            }
         }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
+    <div class="menu active">
+        <h1>Welcome to ZType</h1>
+        <div class="difficulty-selection">
+            <div class="difficulty-option">
+                <input type="radio" id="easy" name="difficulty" value="easy">
+                <label for="easy">Easy</label>
+            </div>
+            <div class="difficulty-option">
+                <input type="radio" id="medium" name="difficulty" value="medium" checked>
+                <label for="medium">Medium</label>
+            </div>
+            <div class="difficulty-option">
+                <input type="radio" id="hard" name="difficulty" value="hard">
+                <label for="hard">Hard</label>
+            </div>
+        </div>
+        <button onclick="startGame()">Start Game</button>
+    </div>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div>
+            <p id="error-counter">Errors: 0</p>
+        </div>
+    </div>
+    <div class="game-over">
+        <h2>Game Over</h2>
+        <p id="final-score"></p>
+        <p id="final-errors"></p>
+        <button onclick="resetGame()">Restart Game</button>
+    </div>
     <script src="main.js"></script>
 </body>
 </html>
