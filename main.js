@@ -55,7 +55,9 @@ function spawnEnemy() {
         y: 0,
         speed: getEnemySpeed(),
         color: colors[Math.floor(Math.random() * colors.length)],  // Случайный цвет
-        shape: shapes[Math.floor(Math.random() * shapes.length)]  // Случайная форма
+        shape: shapes[Math.floor(Math.random() * shapes.length)],  // Случайная форма
+        destroyed: false,  // Флаг для уничтожения врага
+        laserHit: false  // Флаг для отслеживания попадания пули
     });
 }
 
@@ -72,7 +74,7 @@ function getEnemySpeed() {
 
 function updateEnemies() {
     enemies.forEach((enemy, index) => {
-        if (!gameOver) {
+        if (!gameOver && !enemy.destroyed) {
             const dx = player.x - enemy.x;
             const dy = player.y - enemy.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -89,8 +91,10 @@ function updateEnemies() {
 
             drawEnemy(enemy);  // Отображение врагов
 
-            if (enemy.word === enemy.current) {
-                enemies.splice(index, 1);
+            // Если слово полностью введено, ждем попадания лазера для уничтожения
+            if (enemy.word === enemy.current && enemy.laserHit) {
+                createExplosion(enemy.x, enemy.y);
+                enemies.splice(index, 1);  // Удаляем врага
                 activeEnemy = null;
                 currentInput = '';
                 wordsTyped++;
@@ -155,12 +159,23 @@ function drawLasers() {
         ctx.arc(laser.x, laser.y, 3, 0, Math.PI * 2);
         ctx.fill();
 
+        // Проверяем попадание пули в цель
         if (Math.abs(laser.x - laser.targetX) < 5 && Math.abs(laser.y - laser.targetY) < 5) {
-            createExplosion(laser.targetX, laser.targetY);
-            lasers.splice(index, 1);  // Удаление лазера после попадания
+            enemies.forEach((enemy) => {
+                if (!enemy.destroyed && enemy.word === enemy.current) {
+                    enemy.laserHit = true;  // Фиксируем попадание пули
+                }
+            });
+            lasers.splice(index, 1);  // Удаляем лазер после попадания
+        }
+
+        // Удаление пули, если она вышла за пределы экрана
+        if (laser.x < 0 || laser.x > canvas.width || laser.y < 0 || laser.y > canvas.height) {
+            lasers.splice(index, 1);  // Удаляем лазер
         }
     });
 }
+
 
 function createExplosion(x, y) {
     const explosion = document.createElement('div');
@@ -200,10 +215,7 @@ function handleInput(key) {
             activeEnemy.current = currentInput;
 
             if (activeEnemy.word === currentInput) {
-                enemies.splice(enemies.indexOf(activeEnemy), 1);
-                activeEnemy = null;
-                currentInput = '';
-                wordsTyped++;
+                // Ожидаем попадания пули для удаления врага
             }
         } else {
             errorsMade++;
