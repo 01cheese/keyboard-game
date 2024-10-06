@@ -27,7 +27,7 @@ let spawnIntervalId = null;
 const colors = ['#FF6347', '#FFD700', '#ADFF2F', '#00CED1', '#9400D3'];
 const shapes = ['rectangle', 'circle', 'triangle'];  // Фигуры для врагов
 const words = [
-    "as", "I", "his", "that", "he", "was", "for", "on", "are", "with",
+    "as", "i", "his", "that", "he", "was", "for", "on", "are", "with",
     "they", "be", "at", "one", "have", "this", "from", "by", "hot", "word",
     "but", "what", "some", "is", "it", "you", "or", "had", "the", "of",
     "to", "and", "a", "in", "we", "can", "out", "other", "were", "which",
@@ -131,7 +131,7 @@ const words = [
     "consider", "type", "law", "bit", "coast", "copy", "phrase",
     "silent", "tall", "sand", "soil", "roll", "temperature",
     "finger", "industry", "value", "fight", "lie", "beat", "excite",
-    "natural", "view", "sense", "capital", "won’t", "chair",
+    "natural", "view", "sense", "capital", "chair",
     "danger", "fruit", "rich", "thick", "soldier", "process",
     "operate", "practice", "separate", "difficult", "doctor",
     "please", "protect", "noon", "crop", "modern", "element",
